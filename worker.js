@@ -107,6 +107,33 @@ hardSudoku = {
 
 }
 
+veryHardSudoku = {
+    12: 1,
+    17: 2,
+    22: 7,
+    24: 1,
+    35: 6,
+    37: 5,
+    44: 2,
+    48: 8,
+    51: 4,
+    52: 3,
+    59: 2,
+    63: 2,
+    64: 9,
+    66: 3,
+    69: 7,
+    71: 7,
+    74: 3,
+    76: 9,
+    83: 4,
+    88: 9,
+    89: 5,
+    91: 5,
+    95: 8,
+    98: 6
+}
+
 getRowIDs = (id) => {
     var toReturn = []
     Object.keys(currentSudoku).forEach(key => {
@@ -217,7 +244,9 @@ drawSudoku2 = (toDraw = currentSudoku) => {
 
 placeNumber = (id, number) => {
     currentSudoku[id] = number
+    // console.log("" + id + " = " + (currentCan[id] ? currentCan[id] : "gone"))
     delete currentCan[id]
+    // console.log("" + id + " = " + (currentCan[id] ? currentCan[id] : "gone"))
     // console.log("Found: " + id + " was: " + number)
 }
 
@@ -238,21 +267,15 @@ checkIfSolved = () => {
 
 solveCan1 = () => { //if field only have 1 candidate
     var foundANumber = false;
-    try {
-        Object.keys(currentCan).forEach(key => {
-            if (foundANumber) throw BreakException;
+    Object.keys(currentCan).forEach(key => {
+        //we might need a way to break after we found a number
+        if (!foundANumber) {
             if (currentCan[key].length == 1){
-                // currentSudoku[key] = currentCan[key][0]
-
-                // delete currentCan[key]
-                // console.log("Found: " + key + " was: " + currentSudoku[key])
                 placeNumber(key, currentCan[key][0])
                 foundANumber = true;
             }
-        })
-    } catch (e) {
-        if (e !== BreakException) throw e;
-    }
+        }
+    })
     return foundANumber
 }
 
@@ -344,6 +367,7 @@ solveSquares = () => {
 }
 
 calcCan1 = () => {
+    currentCan = {}
     Object.keys(currentSudoku).forEach(key => {
         if (currentSudoku[key] == 0){
             posCandidates = []
@@ -359,18 +383,18 @@ calcCan1 = () => {
 }
 
 calcCan2 = () => { //look in square, if candidates are on a row or column, all other candidates of that number can be removed
-    //if it removed some candidates, run itself again
+    didAnyThing = false;
     for (ii = 1; ii < 10; ii++) {
         boxId = 
         ii == 1 ? 22 :
         ii == 2 ? 52 :
-        ii == 3 ? 72 :
+        ii == 3 ? 82 :
         ii == 4 ? 25 :
         ii == 5 ? 55 :
-        ii == 6 ? 75 :
-        ii == 7 ? 27 :
-        ii == 8 ? 57 :
-        ii == 9 ? 77 : 0
+        ii == 6 ? 85 :
+        ii == 7 ? 28 :
+        ii == 8 ? 58 :
+        ii == 9 ? 88 : 0
 
         ids = getBoxIDs(boxId)
         for (i = 1; i < 10; i++){
@@ -378,21 +402,26 @@ calcCan2 = () => { //look in square, if candidates are on a row or column, all o
             ids.forEach(id => {
                 if (currentCan[id] && currentCan[id].includes(i)) numberWasFoundIn.push(id)
             })
-            if (numberWasFoundIn.length > 0 && numberWasFoundIn.length <= 3){
+            if (numberWasFoundIn.length > 1 && numberWasFoundIn.length <= 3){
                 // console.log("number " + i + " was found in: " + numberWasFoundIn)
 
                 rowsNumberWasFound = []
                 numberWasFoundIn.forEach(id => {rowsNumberWasFound.push(parseInt(id.toString()[1]))})
                 // console.log("number " + i + " was on following rows: " + rowsNumberWasFound + " - " + rowsNumberWasFound)
-                if (rowsNumberWasFound.reduce((a, b) => a + b, 0) / numberWasFoundIn.length == rowsNumberWasFound[0]){
+                // if ((rowsNumberWasFound.reduce((a, b) => a + b, 0) / numberWasFoundIn.length) == rowsNumberWasFound[0]){
+                if (rowsNumberWasFound.filter(row => row == rowsNumberWasFound[0]).length == rowsNumberWasFound.length){
+                    // console.log("TEST: " + rowsNumberWasFound.filter(row => row == rowsNumberWasFound[0]).length)
+                    // console.log("TEST2: " + (rowsNumberWasFound.filter(row => row == rowsNumberWasFound[0]).length == rowsNumberWasFound.length))
                     // console.log("number " + i + " is located on row " + rowsNumberWasFound[0])
                     getRowIDs(numberWasFoundIn[0]).forEach(id =>{
                         if (!numberWasFoundIn.includes(id) && currentCan[id] && currentCan[id].includes(i)){
-                            console.log("removing candidate " + i + " from " + id)
+                            console.log("removing candidate " + i + " from " + id + " (row)")
                             // console.log("old can: " + currentCan[id])
                             currentCan[id] = currentCan[id].filter(can => can != i)
                             // console.log("new can: " + currentCan[id])
-                            calcCan2()
+                            i = 1000;
+                            ii = 1000;
+                            didAnyThing = true;
                         }
                     })
                 }
@@ -400,25 +429,29 @@ calcCan2 = () => { //look in square, if candidates are on a row or column, all o
                 columnsNumberWasFound = []
                 numberWasFoundIn.forEach(id => {columnsNumberWasFound.push(parseInt(id.toString()[0]))})
                 // console.log("number " + i + " was on following columns: " + columnsNumberWasFound)
-                if (columnsNumberWasFound.reduce((a, b) => a + b, 0) / numberWasFoundIn.length == columnsNumberWasFound[0]){
+                // if ((columnsNumberWasFound.reduce((a, b) => a + b, 0) / numberWasFoundIn.length) == columnsNumberWasFound[0]){
+                if (columnsNumberWasFound.filter(row => row == columnsNumberWasFound[0]).length == columnsNumberWasFound.length){
+                    // console.log("" + columnsNumberWasFound.reduce((a, b) => a + b, 0) + " / " + numberWasFoundIn.length + "(= "+columnsNumberWasFound.reduce((a, b) => a + b, 0) / numberWasFoundIn.length+") == " + columnsNumberWasFound[0])
                     // console.log("number " + i + " is located on column " + columnsNumberWasFound[0])
                     getColumnIDs(numberWasFoundIn[0]).forEach(id =>{
                         if (!numberWasFoundIn.includes(id) && currentCan[id] && currentCan[id].includes(i)){
-                            console.log("removing candidate " + i + " from " + id)
+                            console.log("removing candidate " + i + " from " + id + " (column)")
                             // console.log("old can: " + currentCan[id])
                             currentCan[id] = currentCan[id].filter(can => can != i)
                             // console.log("new can: " + currentCan[id])
-                            calcCan2()
+                            i = 1000;
+                            ii = 1000;
+                            didAnyThing = true;
                         }
                     })
                 }
             }
         }
     }
-    return false
+    return didAnyThing
 }
 
-template = hardSudoku
+template = veryHardSudoku
 loadSudoku(template)
 drawSudoku2()
 
@@ -430,9 +463,14 @@ done = false;
 maxTries = 5;
 currentTries = 0;
 while (!done){
-    if (currentTries >= maxTries) break;
+    if (currentTries >= maxTries){
+        // console.log(currentCan)
+        break;
+    }
     calcCan1()
-    calcCan2()
+    while (true){
+        if (!calcCan2()) break
+    }
     solveCan1() ? numbersFoundBySolveCan1++ : 
     solveRows() ? numbersFoundBySolveRows++ : 
     solveColumns() ? numbersFoundBySolveColumns++ : 
