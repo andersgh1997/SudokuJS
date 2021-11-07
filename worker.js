@@ -250,19 +250,32 @@ placeNumber = (id, number) => {
     // console.log("Found: " + id + " was: " + number)
 }
 
-checkIfSolved = () => {
+checkIfSolved = (toPrint = false) => {
     total = 0;
     Object.keys(currentSudoku).forEach(key => {
         total += currentSudoku[key]
     })
-    console.log(""+total + " / " + 405)
-
-    for (i = 1; i < 10; i++) {
-        rowVal = getNumbersOnRow(parseInt("1" + i.toString())).reduce((a, b) => a + b, 0)
-        rowVal == 45 ? null : console.log("row " + i + ":\t\t" + rowVal + " / " + 45)
-        columnVal = getNumbersOnColumn(parseInt(i.toString() + "1")).reduce((a, b) => a + b, 0)
-        columnVal == 45 ? null : console.log("column " + i + ":\t" + columnVal + " / " + 45)
+    if (toPrint){
+        console.log(""+total + " / " + 405)
+        for (i = 1; i < 10; i++) {
+            rowVal = getNumbersOnRow(parseInt("1" + i.toString())).reduce((a, b) => a + b, 0)
+            rowVal == 45 ? null : console.log("row " + i + ":\t\t" + rowVal + " / " + 45)
+            columnVal = getNumbersOnColumn(parseInt(i.toString() + "1")).reduce((a, b) => a + b, 0)
+            columnVal == 45 ? null : console.log("column " + i + ":\t" + columnVal + " / " + 45)
+        }
     }
+
+    if (total == 405) return true;
+    else return false;
+}
+
+checkIfNumbersAreCorrect = (sudoku = currentSudoku) => {
+    Object.keys(sudoku).forEach(key => {
+        if (getNumbersOnRow(key).includes(sudoku[key])) return false
+        else if (getNumbersOnColumn(key).includes(sudoku[key])) return false
+        else if (getNumbersOnBox(key).includes(sudoku[key])) return false
+    })
+    return true
 }
 
 solveCan1 = () => { //if field only have 1 candidate
@@ -366,6 +379,43 @@ solveSquares = () => {
     return foundANumber
 }
 
+guessingOfFirstGrade = () => { // we look at the first candidates in fields
+    // first we need to save the current state of the sudoku and the candiates,
+    // first so we can modify it, but also so we can restore it
+    superBackupSudoku = {...currentSudoku}
+    superBackupCan = {...currentCan}
+    weFoundTheAnswer = false;
+    weGuessedOn = ""
+
+    Object.keys(superBackupCan).forEach(key => {
+        if (!weFoundTheAnswer) {
+            currentSudoku[key] = currentCan[key][0]
+            tryToSolve()
+            
+            if (checkIfNumbersAreCorrect() && checkIfSolved()) {
+                weFoundTheAnswer = true
+                weGuessedOn = "guessed that " + key + " is " + currentSudoku[key] + "\n" +
+                "which had the following candiates: " + superBackupCan[key]
+            }
+            else {
+                currentCan = {...superBackupCan}
+                currentSudoku = {...superBackupSudoku}
+            }
+        }
+    })
+
+    if (!weFoundTheAnswer){
+        console.log("guessingOfFirstGrade didnt find the answer")
+        console.log("restoring backup")
+        currentCan = {...superBackupCan}
+        currentSudoku = {...superBackupSudoku}
+    } 
+    else {
+        console.log("guessingOfFirstGrade found the answer")
+        console.log(weGuessedOn)
+    }
+}
+
 calcCan1 = () => {
     currentCan = {}
     Object.keys(currentSudoku).forEach(key => {
@@ -451,6 +501,26 @@ calcCan2 = () => { //look in square, if candidates are on a row or column, all o
     return didAnyThing
 }
 
+tryToSolve = () => {
+    numbersFoundBySolveCan1 = 0;
+    numbersFoundBySolveRows = 0;
+    numbersFoundBySolveColumns = 0;
+    numbersFoundBySolveSquares = 0;
+    toBreak = false
+    while (true){
+        if (toBreak) break;
+        calcCan1()
+        while (true){
+            if (!calcCan2()) break
+        }
+        solveCan1() ? numbersFoundBySolveCan1++ : 
+        solveRows() ? numbersFoundBySolveRows++ : 
+        solveColumns() ? numbersFoundBySolveColumns++ : 
+        solveSquares() ? numbersFoundBySolveSquares++ : 
+        true ? toBreak = true : null
+    }
+}
+
 template = veryHardSudoku
 loadSudoku(template)
 drawSudoku2()
@@ -467,31 +537,42 @@ while (!done){
         // console.log(currentCan)
         break;
     }
-    calcCan1()
-    while (true){
-        if (!calcCan2()) break
-    }
-    solveCan1() ? numbersFoundBySolveCan1++ : 
-    solveRows() ? numbersFoundBySolveRows++ : 
-    solveColumns() ? numbersFoundBySolveColumns++ : 
-    solveSquares() ? numbersFoundBySolveSquares++ : 
-    true ? currentTries++ : null
+    // calcCan1()
+    // while (true){
+    //     if (!calcCan2()) break
+    // }
+    // solveCan1() ? numbersFoundBySolveCan1++ : 
+    // solveRows() ? numbersFoundBySolveRows++ : 
+    // solveColumns() ? numbersFoundBySolveColumns++ : 
+    // solveSquares() ? numbersFoundBySolveSquares++ : 
+    // true ? currentTries++ : null
+    tryToSolve()
+    currentTries++
 }
+
+if (checkIfSolved()){
+    done = true
+    currentTries = 0
+}
+
+if (!done) guessingOfFirstGrade()
+
+
 
 drawSudoku2()
 
-if (true){//show stats
+if (false){//show stats
     console.log("\nFOUND")
     console.log("-----------------")
-    console.log("SolveCan1:\t\t" + numbersFoundBySolveCan1)
-    console.log("SolveRows:\t\t" + numbersFoundBySolveRows)
+    console.log("SolveCan1:\t" + numbersFoundBySolveCan1)
+    console.log("SolveRows:\t" + numbersFoundBySolveRows)
     console.log("SolveColumns:\t" + numbersFoundBySolveColumns)
     console.log("SolveSquares:\t" + numbersFoundBySolveSquares)
     console.log("-----------------")
-    console.log("InTotal:\t\t" + (numbersFoundBySolveCan1 + numbersFoundBySolveRows + numbersFoundBySolveColumns + numbersFoundBySolveSquares) + "\n")
+    console.log("InTotal:\t" + (numbersFoundBySolveCan1 + numbersFoundBySolveRows + numbersFoundBySolveColumns + numbersFoundBySolveSquares) + "\n")
 }
 
-checkIfSolved()
+checkIfSolved(true)
 
 // calcCan2()
 
