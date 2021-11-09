@@ -134,6 +134,58 @@ veryHardSudoku = {
     98: 6
 }
 
+veryHardSudoku2 = {
+    11: 1,
+    13: 4,
+    19: 2,
+    21: 9,
+    23: 2,
+    26: 7,
+    27: 8,
+    37: 1,
+    38: 5,
+    44: 9,
+    45: 3,
+    46: 6,
+    48: 2,
+    52: 9,
+    54: 1,
+    59: 6,
+    61: 8,
+    68: 4,
+    72: 4,
+    75: 8,
+    76: 9,
+    83: 6,
+    84: 4,
+    99: 3
+}
+
+expert = {
+    13: 4,
+    14: 6,
+    17: 3,
+    23: 9,
+    24: 4,
+    25: 3,
+    26: 2,
+    32: 8,
+    39: 5,
+    46: 5,
+    49: 7,
+    55: 2,
+    57: 8,
+    62: 9,
+    68: 1,
+    71: 1,
+    82: 5,
+    84: 7,
+    88: 8,
+    89: 9,
+    93: 3,
+    96: 6
+}
+
 getRowIDs = (id) => {
     var toReturn = []
     Object.keys(currentSudoku).forEach(key => {
@@ -389,7 +441,8 @@ guessingOfFirstGrade = () => { // we look at the first candidates in fields
 
     Object.keys(superBackupCan).forEach(key => {
         if (!weFoundTheAnswer) {
-            currentSudoku[key] = currentCan[key][0]
+            // currentSudoku[key] = currentCan[key][0]
+            placeNumber(key, currentCan[key][0])
             tryToSolve()
             
             if (checkIfNumbersAreCorrect() && checkIfSolved()) {
@@ -412,6 +465,118 @@ guessingOfFirstGrade = () => { // we look at the first candidates in fields
     } 
     else {
         console.log("guessingOfFirstGrade found the answer")
+        console.log(weGuessedOn)
+    }
+}
+
+guess = (superBackupSudoku, superBackupCan, key, can) => {
+    weFoundTheAnswer = false;
+    weGuessedOn = ""
+    placeNumber(key, can)
+    tryToSolve()
+    if (checkIfNumbersAreCorrect() && checkIfSolved()) {
+        weFoundTheAnswer = true
+        weGuessedOn = "guessed that " + key + " is " + can + "\n" +
+        "which had the following candiates: " + superBackupCan[key]
+    }
+    else {
+        currentCan = {...superBackupCan}
+        currentSudoku = {...superBackupSudoku}
+    }
+    return weFoundTheAnswer
+}
+
+guessing = () => { 
+    // first we need to save the current state of the sudoku and the candiates,
+    // first so we can modify it, but also so we can restore it
+
+    if (typeof grade == "undefined") grade = 3
+    maxGrade = 3;
+
+    console.log("\n-------------------------------------------")
+    console.log("       NOW WE ARE STARTING TO GUESS        ")
+    console.log("-------------------------------------------\n")
+
+    superBackupSudoku = {...currentSudoku}
+    superBackupCan = {...currentCan}
+    weFoundTheAnswer = false;
+    if (typeof weFoundTheAnswer == "undefined") weFoundTheAnswer = false
+    weGuessedOn = ""
+
+    Object.keys(currentCan).forEach(key => {
+        //now we look at each unsolved field, and now we want to look at that fields candidates
+        if (!weFoundTheAnswer) {
+            calcCan1()
+            while (true){
+                if (!calcCan2()) break
+            }
+            currentCan[key].forEach(can => {
+                if (!weFoundTheAnswer){
+                    //now we go though all the candidates for this field
+                    if (grade >= 2){
+                        //we need to guess of 2. grade
+                        placeNumber(key, can)
+                        Object.keys(currentCan).forEach(key2 => {
+                            if (!weFoundTheAnswer){
+                                calcCan1()
+                                while (true){
+                                    if (!calcCan2()) break
+                                }
+                                currentCan[key2].forEach(can2 => {
+                                    if (!weFoundTheAnswer){
+                                        if (grade >= 3){
+                                            placeNumber(key2, can2)
+                                            Object.keys(currentCan).forEach(key3 => {
+                                                if (!weFoundTheAnswer){
+                                                    calcCan1()
+                                                    while (true){
+                                                        if (!calcCan2()) break
+                                                    }
+                                                    currentCan[key3].forEach(can3 => {
+                                                        if (!weFoundTheAnswer){
+                                                            placeNumber(key3, can3)
+                                                            console.log("guessed that " + key3 + " is " + can3 + " inside of " + key2 + "=" + can2 + " inside of " + key + "=" + can)
+                                                            weFoundTheAnswer = guess({...currentSudoku}, {...currentCan}, key3, can3)
+                                                        }
+                                                    })
+                                                }
+                                            })
+                                        }
+                                        else {
+                                            console.log("guessed that " + key2 + " is " + can2 + " inside of " + key + "=" + can)
+                                            weFoundTheAnswer = guess({...currentSudoku}, {...currentCan}, key2, can2)
+                                        }
+                                    }
+                                })
+                            }
+                        })
+                        //now current can have been modified, and we can now guess on the second field
+                    }
+                    else {
+                        console.log("guessed that " + key + " is " + can)
+                        weFoundTheAnswer = guess({...currentSudoku}, {...currentCan}, key, can)
+                    }
+                }
+            })
+        }
+    })
+
+    // weFoundTheAnswer = guess({...currentSudoku}, {...currentCan})
+
+    if (!weFoundTheAnswer){
+        console.log("gussing of " + grade + ". grade didnt find the answer")
+        if (grade < maxGrade){
+            grade++
+            guessing()
+        } 
+        else {
+            //this is the last code run in this method with no success
+            currentCan = {...superBackupCan}
+            currentSudoku = {...superBackupSudoku}
+        }
+    } 
+    else {
+        console.log("gussing of " + grade + ". grade found the answer")
         console.log(weGuessedOn)
     }
 }
@@ -465,7 +630,9 @@ calcCan2 = () => { //look in square, if candidates are on a row or column, all o
                     // console.log("number " + i + " is located on row " + rowsNumberWasFound[0])
                     getRowIDs(numberWasFoundIn[0]).forEach(id =>{
                         if (!numberWasFoundIn.includes(id) && currentCan[id] && currentCan[id].includes(i)){
-                            console.log("removing candidate " + i + " from " + id + " (row)")
+                            // ----------------------------------------
+                            // console.log("removing candidate " + i + " from " + id + " (row)")
+                            // ----------------------------------------
                             // console.log("old can: " + currentCan[id])
                             currentCan[id] = currentCan[id].filter(can => can != i)
                             // console.log("new can: " + currentCan[id])
@@ -485,7 +652,9 @@ calcCan2 = () => { //look in square, if candidates are on a row or column, all o
                     // console.log("number " + i + " is located on column " + columnsNumberWasFound[0])
                     getColumnIDs(numberWasFoundIn[0]).forEach(id =>{
                         if (!numberWasFoundIn.includes(id) && currentCan[id] && currentCan[id].includes(i)){
-                            console.log("removing candidate " + i + " from " + id + " (column)")
+                            // ----------------------------------------
+                            // console.log("removing candidate " + i + " from " + id + " (column)")
+                            // ----------------------------------------
                             // console.log("old can: " + currentCan[id])
                             currentCan[id] = currentCan[id].filter(can => can != i)
                             // console.log("new can: " + currentCan[id])
@@ -521,7 +690,7 @@ tryToSolve = () => {
     }
 }
 
-template = veryHardSudoku
+template = expert
 loadSudoku(template)
 drawSudoku2()
 
@@ -537,15 +706,6 @@ while (!done){
         // console.log(currentCan)
         break;
     }
-    // calcCan1()
-    // while (true){
-    //     if (!calcCan2()) break
-    // }
-    // solveCan1() ? numbersFoundBySolveCan1++ : 
-    // solveRows() ? numbersFoundBySolveRows++ : 
-    // solveColumns() ? numbersFoundBySolveColumns++ : 
-    // solveSquares() ? numbersFoundBySolveSquares++ : 
-    // true ? currentTries++ : null
     tryToSolve()
     currentTries++
 }
@@ -555,7 +715,7 @@ if (checkIfSolved()){
     currentTries = 0
 }
 
-if (!done) guessingOfFirstGrade()
+if (!done) guessing()
 
 
 
